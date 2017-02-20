@@ -1,8 +1,21 @@
-extern crate crypto;
+#![allow(non_camel_case_types)]
+#![allow(non_snake_case)]
+
 use std::path::Path;
 
+extern crate crypto;
+
+mod state;
+mod tests;
+
+// cargo run
+// cargo test
+
 fn main() {
+	use state::State;
+
 	let bios: [u8; 256] = read_bios(Path::new("DMG_ROM.gb"));
+	let mut st = State::new(bios);
 }
 
 fn read_bios(path: &Path) -> [u8; 256] {
