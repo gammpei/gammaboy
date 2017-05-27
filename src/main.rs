@@ -5,6 +5,7 @@ use std::path::Path;
 
 extern crate crypto;
 
+mod cpu;
 mod state;
 mod tests;
 
@@ -16,6 +17,10 @@ fn main() {
 
 	let bios: [u8; 256] = read_bios(Path::new("DMG_ROM.gb"));
 	let mut st = State::new(bios);
+	loop {
+		println!("{}", state::log_registers(&st));
+		cpu::fetch_decode_execute(&mut st);
+	}
 }
 
 fn read_bios(path: &Path) -> [u8; 256] {
