@@ -9,6 +9,7 @@ pub struct State {
 	PC: u16,
 	SP: u16,
 	bios: [u8; 256],
+	mem: [u8; 0xFFFF+1],
 }
 
 impl State {
@@ -21,6 +22,7 @@ impl State {
 			PC: 0x00,
 			SP: 0x00,
 			bios: bios,
+			mem: [0x00; 0xFFFF+1],
 		}
 	}
 }
@@ -118,10 +120,10 @@ impl Flag {
 
 	pub fn name(self) -> &'static str {
 		match self {
-			Flag::Z => "F.Z",
-			Flag::N => "F.N",
-			Flag::H => "F.H",
-			Flag::C => "F.C",
+			Flag::Z => "Z",
+			Flag::N => "N",
+			Flag::H => "H",
+			Flag::C => "C",
 		}
 	}
 
@@ -137,13 +139,48 @@ impl Flag {
 	}
 }
 
-pub fn log_registers(st: &State) -> String {
-	format!("PC=0x{:04X} AF=0x{:04X} BC=0x{:04X} DE=0x{:04X} HL=0x{:04X} SP=0x{:04X}",
-		PC.get(st), AF.get(st), BC.get(st), DE.get(st), HL.get(st), SP.get(st)
-	)
+pub fn read_mem(st: &State, addr: u16) -> u8 {
+	match addr {
+		0x0000...0x00FF => st.bios[addr as usize],
+		
+		// The bios already contains the Nintendo logo data at 0x00A8,
+		// so we cheat and we make 0x0104...0x0133 return that data.
+		// We do this so that the bios doesn't lock up.
+		0x0104...0x0133 => st.bios[(0x00A8 + addr - 0x0104) as usize],
+
+		// Dummy values to make the bios checksum work.
+		// If we don't, the bios locks up.
+		0x0134...0x014D => if addr == 0x0134 { 0xE7 } else { 0x00 },
+
+		0xFF42 => st.mem[addr as usize], // SCY: Scroll Y
+
+		// We return 144 because otherwise the bios will wait forever
+		// on that value to come.
+		0xFF44 => 144, // LY: LCDC Y-Coordinate
+
+		0xFF80...0xFFFE => st.mem[addr as usize], // Zero Page
+
+		_ => panic!("Unimplemented memory read at 0x{:04X}.", addr),
+	}
 }
 
-pub fn read_mem(st: &State, addr: u16) -> u8 {
-	if addr <= 0x00FF { st.bios[addr as usize] }
-	else { unimplemented!(); }
+pub fn set_mem(st: &mut State, addr: u16, new_value: u8) {
+	let set = |st: &mut State| { st.mem[addr as usize] = new_value; };
+	match addr {
+		0x8000...0x97FF => set(st), // Character RAM
+		0x9800...0x9BFF => set(st), // BG Map Data 1
+		0x9C00...0x9FFF => set(st), // BG Map Data 2
+		0xFF11 => (), // TODO Audio
+		0xFF12 => (), // TODO Audio
+		0xFF13 => (), // TODO Audio
+		0xFF14 => (), // TODO Audio
+		0xFF24 => (), // TODO Audio
+		0xFF25 => (), // TODO Audio
+		0xFF26 => (), // TODO Audio
+		0xFF40 => set(st), // LCDC: LCD Control
+		0xFF42 => set(st), // SCY: Scroll Y
+		0xFF47 => set(st), // BGP: BackGround Palette
+		0xFF80...0xFFFE => set(st), // Zero Page
+		_ => panic!("Unimplemented memory write at 0x{:04X}.", addr),
+	}
 }

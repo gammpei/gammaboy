@@ -6,6 +6,7 @@ use std::path::Path;
 extern crate crypto;
 
 mod cpu;
+mod logging;
 mod state;
 mod tests;
 
@@ -13,13 +14,15 @@ mod tests;
 // cargo test
 
 fn main() {
+	use cpu::{CPU, fetch_decode_execute};
 	use state::State;
 
+	let cpu = CPU::new();
 	let bios: [u8; 256] = read_bios(Path::new("DMG_ROM.gb"));
 	let mut st = State::new(bios);
 	loop {
-		println!("{}", state::log_registers(&st));
-		cpu::fetch_decode_execute(&mut st);
+		logging::log_registers(&st);
+		fetch_decode_execute(&cpu, &mut st);
 	}
 }
 
