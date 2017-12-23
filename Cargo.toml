@@ -1,6 +1,0 @@
-[package]
-name = "gammaboy"
-version = "0.0.0"
-
-[dependencies]
-rust-crypto = "0.2.36"
