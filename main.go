@@ -5,12 +5,18 @@ import (
 	cmdLineFlag "flag"
 	"fmt"
 	"io/ioutil"
+	"time"
 )
 
 var bios [256]u8
 var jumpTable [256]*instr
 var extendedJumpTable [256]*instr
-var doLog bool
+
+var flags struct {
+	green   bool
+	record  bool
+	verbose bool
+}
 
 func init() {
 	loadBios()
@@ -18,12 +24,45 @@ func init() {
 }
 
 func main() {
-	cmdLineFlag.BoolVar(&doLog, "log", false, "Output what's happening.")
+	cmdLineFlag.BoolVar(&flags.green, "green", false, "Use a green palette instead of grayscale.")
+	cmdLineFlag.BoolVar(&flags.record, "record", false, "Create a video recording.")
+	cmdLineFlag.BoolVar(&flags.verbose, "verbose", false, "Output every instruction (very slow).")
 	cmdLineFlag.Parse()
 
+	gui := newGui()
+	defer gui.close()
+
 	st := st{}
+
+	defer func(start time.Time) {
+		elapsed := time.Since(start)
+		fmt.Println(elapsed)
+	}(time.Now())
+
+	curScanline := getScanline(&st)
 	for {
-		fetchDecodeExecute(&st)
+		// Draw the whole frame at once (good enough for now).
+		gui.drawFrame(&st)
+
+		// Process the events once per frame (good enough for now).
+		if !gui.processEvents() {
+			break
+		}
+
+		// Execute instructions until we need to draw a frame.
+		for {
+			prevScanline := curScanline
+
+			// We assume that all instructions take 4 cycles to execute (good enough for now).
+			fetchDecodeExecute(&st)
+			st.cycles += 4
+
+			// If the scanline wraps around, we break and draw a frame.
+			curScanline = getScanline(&st)
+			if curScanline < prevScanline {
+				break
+			}
+		}
 	}
 }
 

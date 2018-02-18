@@ -7,7 +7,7 @@ import (
 
 func fetchDecodeExecute(st *st) {
 	// Log the registers
-	if doLog {
+	if flags.verbose {
 		fmt.Printf("PC=0x%04X AF=0x%04X BC=0x%04X DE=0x%04X HL=0x%04X SP=0x%04X\n",
 			PC.get(st), AF.get(st), BC.get(st), DE.get(st), HL.get(st), SP.get(st),
 		)
@@ -41,7 +41,7 @@ func fetchDecodeExecute(st *st) {
 	PC.set(st, PC_0+sizeOfInstr)
 
 	// Log the instruction
-	if doLog {
+	if flags.verbose {
 		r := func(offset u16) u8 { return st.readMem_u8(PC_0 + offset) }
 		var instrBytes string
 		switch sizeOfInstr {

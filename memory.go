@@ -5,14 +5,15 @@ import (
 )
 
 func (st *st) readMem_u8(addr u16) u8 {
-	if 0x0000 <= addr && addr <= 0x00FF {
+	switch {
+	case 0x0000 <= addr && addr <= 0x00FF:
 		return bios[addr]
-	} else if 0x0104 <= addr && addr <= 0x0133 {
+	case 0x0104 <= addr && addr <= 0x0133:
 		// The bios already contains the Nintendo logo data at 0x00A8,
-		// so we cheat and we make 0x0104...0x0133 return that data.
+		// so we cheat and we make 0x0104-0x0133 return that data.
 		// We do this so that the bios doesn't lock up.
 		return bios[0x00A8+addr-0x0104]
-	} else if 0x0134 <= addr && addr <= 0x014D {
+	case 0x0134 <= addr && addr <= 0x014D:
 		// Dummy values to make the bios checksum work.
 		// If we don't, the bios locks up.
 		if addr == 0x0134 {
@@ -20,41 +21,32 @@ func (st *st) readMem_u8(addr u16) u8 {
 		} else {
 			return 0x00
 		}
-	} else if addr == 0xFF42 {
-		// SCY: Scroll Y
-		return st.mem[addr]
-	} else if addr == 0xFF44 {
-		// LY: LCDC Y-Coordinate
-		// We return 144 because the bios will wait forever for that value.
-		return 144
-	} else if 0xFF80 <= addr && addr <= 0xFFFE {
-		// Zero Page
-		return st.mem[addr]
-	} else {
+	case 0x8000 <= addr && addr <= 0x97FF: // Tile sets
+	case 0x9800 <= addr && addr <= 0x9FFF: // BG tile maps
+	case addr == 0xFF40: // LCDC: LCD Control
+	case addr == 0xFF42: // SCY: Scroll Y
+	case addr == 0xFF43: // SCX: Scroll X
+	case addr == 0xFF44: // LY: LCDC Y-Coordinate
+		return getScanline(st)
+	case addr == 0xFF47: // BGP: BackGround Palette
+	case 0xFF80 <= addr && addr <= 0xFFFE: // Zero Page
+	default:
 		panic(fmt.Sprintf("Unimplemented memory read at 0x%04X.", addr))
 	}
+	return st.mem[addr]
 }
 
 func (st *st) writeMem_u8(addr u16, value u8) {
-	if 0x8000 <= addr && addr <= 0x97FF {
-		// Character RAM
-	} else if 0x9800 <= addr && addr <= 0x9BFF {
-		// BG Map Data 1
-	} else if 0x9C00 <= addr && addr <= 0x9FFF {
-		// BG Map Data 2
-	} else if 0xFF11 <= addr && addr <= 0xFF14 {
-		// TODO Audio
-	} else if 0xFF24 <= addr && addr <= 0xFF26 {
-		// TODO Audio
-	} else if addr == 0xFF40 {
-		// LCDC: LCD Control
-	} else if addr == 0xFF42 {
-		// SCY: Scroll Y
-	} else if addr == 0xFF47 {
-		// BGP: BackGround Palette
-	} else if 0xFF80 <= addr && addr <= 0xFFFE {
-		// Zero Page
-	} else {
+	switch {
+	case 0x8000 <= addr && addr <= 0x97FF: // Tile sets
+	case 0x9800 <= addr && addr <= 0x9FFF: // BG tile maps
+	case 0xFF11 <= addr && addr <= 0xFF14: // TODO Audio
+	case 0xFF24 <= addr && addr <= 0xFF26: // TODO Audio
+	case addr == 0xFF40: // LCDC: LCD Control
+	case addr == 0xFF42: // SCY: Scroll Y
+	case addr == 0xFF47: // BGP: BackGround Palette
+	case 0xFF80 <= addr && addr <= 0xFFFE: // Zero Page
+	default:
 		panic(fmt.Sprintf("Unimplemented memory write at 0x%04X.", addr))
 	}
 	st.mem[addr] = value
