@@ -42,7 +42,7 @@ func newGui() *gui {
 		sdl.WINDOWPOS_UNDEFINED, // x
 		sdl.WINDOWPOS_UNDEFINED, // y
 		160, 144, // width, height
-		0x0000, // flags
+		sdl.WINDOW_RESIZABLE, // flags
 	)
 	check(err)
 
@@ -51,6 +51,10 @@ func newGui() *gui {
 		-1,     // index of the rendering driver
 		0x0000, // flags
 	)
+	check(err)
+
+	assert(sdl.SetHint(sdl.HINT_RENDER_SCALE_QUALITY, flags.scalingAlg))
+	err = renderer.SetLogicalSize(160, 144)
 	check(err)
 
 	texture, err := renderer.CreateTexture(

@@ -33,9 +33,10 @@ var jumpTable [256]*instr
 var extendedJumpTable [256]*instr
 
 var flags struct {
-	green   bool
-	record  bool
-	verbose bool
+	green      bool
+	record     bool
+	scalingAlg string
+	verbose    bool
 }
 
 func init() {
@@ -46,6 +47,8 @@ func init() {
 func main() {
 	cmdLineFlag.BoolVar(&flags.green, "green", false, "Use a green palette instead of grayscale.")
 	cmdLineFlag.BoolVar(&flags.record, "record", false, "Create a video recording.")
+	cmdLineFlag.StringVar(&flags.scalingAlg, "scaling-alg", "0",
+		"Scaling algorithm: 0 or nearest, 1 or linear.")
 	cmdLineFlag.BoolVar(&flags.verbose, "verbose", false, "Output every instruction (very slow).")
 	cmdLineFlag.Parse()
 
