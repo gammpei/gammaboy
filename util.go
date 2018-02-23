@@ -20,11 +20,21 @@
 
 package main
 
+import (
+	"fmt"
+	"time"
+)
+
 type u3 uint
 type u8 = uint8
 type i8 = int8
 type u16 = uint16
 type u32 = uint32
+
+func stopWatch(s string, start time.Time) {
+	elapsed := time.Since(start)
+	fmt.Printf("%s: %.3fs\n", s, elapsed.Seconds())
+}
 
 func getBit(x u8, bit uint) bool {
 	assert(0 <= bit && bit <= 7)

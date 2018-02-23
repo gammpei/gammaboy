@@ -57,10 +57,7 @@ func main() {
 
 	st := st{}
 
-	defer func(start time.Time) {
-		elapsed := time.Since(start)
-		fmt.Println(elapsed)
-	}(time.Now())
+	defer stopWatch("main loop", time.Now())
 
 	curScanline := getScanline(&st)
 	for {
@@ -90,13 +87,25 @@ func main() {
 }
 
 func loadBios() {
-	file, err := ioutil.ReadFile("DMG_ROM.gb")
+	defer stopWatch("loadBios", time.Now())
+
+	fis, err := ioutil.ReadDir(".")
 	check(err)
 
-	assert(len(file) == 256)
+	for _, fi := range fis {
+		if fi.Size() == 256 {
+			file, err := ioutil.ReadFile(fi.Name())
+			check(err)
 
-	hash := fmt.Sprintf("%x", sha256.Sum256(file))
-	assert(hash == "cf053eccb4ccafff9e67339d4e78e98dce7d1ed59be819d2a1ba2232c6fce1c7")
+			assert(len(file) == 256)
 
-	copy(bios[:], file)
+			hash := fmt.Sprintf("%x", sha256.Sum256(file))
+			if hash == "cf053eccb4ccafff9e67339d4e78e98dce7d1ed59be819d2a1ba2232c6fce1c7" {
+				copy(bios[:], file)
+				return
+			}
+		}
+	}
+
+	panic("Could not find the bios file.")
 }
