@@ -22,9 +22,12 @@ package main
 
 import (
 	"strconv"
+	"time"
 )
 
 func buildJumpTables() {
+	defer stopWatch("buildJumpTables", time.Now())
+
 	buildJumpTable()
 	buildExtendedJumpTable()
 }
@@ -67,9 +70,13 @@ var F_operands = map[string]r_bool{
 }
 
 var ALU = map[string]operation{
-	"000": ADD1,
+	"000": ADD_A,
+	"001": ADC_A,
 	"010": SUB,
+	// "011": SBC,
+	"100": AND,
 	"101": XOR,
+	"110": OR,
 	"111": CP,
 }
 
@@ -100,6 +107,9 @@ func buildJumpTable() {
 	}
 
 	// ADD HL,R
+	for ii, x := range R2 {
+		add("00"+ii+"1001", ADD_HL, x)
+	}
 
 	// LD (R),A
 	for i, x := range R1 {
@@ -200,15 +210,25 @@ func buildJumpTable() {
 	}
 
 	// RST N
+
 	// RET F
+	for ii, x := range F_operands {
+		add("110"+ii+"000", RET1, x)
+	}
 
 	// RET
 	add("11001001", RET0)
 
 	// RETI
 	// JP F,N
+
 	// JP N
+	add("11000011", JP1, imm_u16)
+
 	// CALL F,N
+	for ii, x := range F_operands {
+		add("110"+ii+"100", CALL2, x, imm_u16)
+	}
 
 	// CALL N
 	add("11001101", CALL1, imm_u16)
@@ -234,7 +254,15 @@ func buildJumpTable() {
 	// LD A,(N)
 	add("11111010", LD_u8, A, mem{imm_u16})
 
-	// ...
+	// JP HL
+	add("11101001", JP1, HL)
+
+	// LD SP,HL
+
+	// DI
+	add("11110011", DI)
+
+	// EI
 }
 
 func buildExtendedJumpTable() {
@@ -245,16 +273,20 @@ func buildExtendedJumpTable() {
 	// RdC
 
 	// Rd D
-	for jjj, x := range D_operands {
-		add("00010"+jjj, RL, x)
+	for iii, x := range D_operands {
+		add("00010"+iii, RL, x)
 	}
-	for jjj, x := range D_operands {
-		add("00011"+jjj, RR, x)
+	for iii, x := range D_operands {
+		add("00011"+iii, RR, x)
 	}
 
 	// SdA D
 	// SWAP D
+
 	// SRL D
+	for iii, x := range D_operands {
+		add("00111"+iii, SRL, x)
+	}
 
 	// BIT N,D
 	for iii, x := range N {

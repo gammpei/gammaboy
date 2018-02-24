@@ -22,6 +22,7 @@ package main
 
 import (
 	"github.com/veandco/go-sdl2/sdl"
+	"time"
 	"unsafe"
 )
 
@@ -33,12 +34,14 @@ type gui struct {
 	recorder *recorder
 }
 
-func newGui() *gui {
+func newGui(title string) *gui {
+	defer stopWatch("newGui", time.Now())
+
 	err := sdl.Init(sdl.INIT_VIDEO)
 	check(err)
 
 	window, err := sdl.CreateWindow(
-		"gammaboy",              // title
+		title,
 		sdl.WINDOWPOS_UNDEFINED, // x
 		sdl.WINDOWPOS_UNDEFINED, // y
 		160, 144, // width, height
@@ -218,7 +221,9 @@ func (gui *gui) drawBackground(st *st, screen *[144][160]u32) {
 	SCY := st.readMem_u8(0xFF42)
 	for y := 0; y < 144; y++ {
 		for x := 0; x < 160; x++ {
-			screen[y][x] = bg[int(SCY)+y][int(SCX)+x]
+			bgX := SCX + u8(x)
+			bgY := SCY + u8(y)
+			screen[y][x] = bg[bgY][bgX]
 		}
 	}
 }

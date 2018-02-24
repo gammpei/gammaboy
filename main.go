@@ -21,9 +21,7 @@
 package main
 
 import (
-	"crypto/sha256"
 	cmdLineFlag "flag"
-	"fmt"
 	"io/ioutil"
 	"time"
 )
@@ -49,13 +47,27 @@ func main() {
 	cmdLineFlag.BoolVar(&flags.record, "record", false, "Create a video recording.")
 	cmdLineFlag.StringVar(&flags.scalingAlg, "scaling-alg", "0",
 		"Scaling algorithm: 0 or nearest, 1 or linear.")
-	cmdLineFlag.BoolVar(&flags.verbose, "verbose", false, "Output every instruction (very slow).")
+	cmdLineFlag.BoolVar(&flags.verbose, "verbose", false, "Print every instruction (very slow).")
 	cmdLineFlag.Parse()
 
-	gui := newGui()
-	defer gui.close()
+	args := cmdLineFlag.Args()
+	var romPath string
+	var title string
+	switch len(args) {
+	case 0:
+		romPath = ""
+		title = "gammaboy"
+	case 1:
+		romPath = args[0]
+		title = romPath + " < gammaboy"
+	default:
+		assert(false)
+	}
 
-	st := st{}
+	st := newState(romPath)
+
+	gui := newGui(title)
+	defer gui.close()
 
 	defer stopWatch("main loop", time.Now())
 
@@ -99,7 +111,7 @@ func loadBios() {
 
 			assert(len(file) == 256)
 
-			hash := fmt.Sprintf("%x", sha256.Sum256(file))
+			hash := sha256Hash(file)
 			if hash == "cf053eccb4ccafff9e67339d4e78e98dce7d1ed59be819d2a1ba2232c6fce1c7" {
 				copy(bios[:], file)
 				return

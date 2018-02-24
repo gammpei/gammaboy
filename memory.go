@@ -27,22 +27,18 @@ import (
 func (st *st) readMem_u8(addr u16) u8 {
 	switch {
 	case 0x0000 <= addr && addr <= 0x00FF:
-		return bios[addr]
-	case 0x0104 <= addr && addr <= 0x0133:
-		// The bios already contains the Nintendo logo data at 0x00A8,
-		// so we cheat and we make 0x0104-0x0133 return that data.
-		// We do this so that the bios doesn't lock up.
-		return bios[0x00A8+addr-0x0104]
-	case 0x0134 <= addr && addr <= 0x014D:
-		// Dummy values to make the bios checksum work.
-		// If we don't, the bios locks up.
-		if addr == 0x0134 {
-			return 0xE7
+		if st.biosIsEnabled {
+			return bios[addr]
 		} else {
-			return 0x00
+			return st.rom[addr]
 		}
+	case 0x0100 <= addr && addr <= 0x7FFF:
+		return st.rom[addr]
 	case 0x8000 <= addr && addr <= 0x97FF: // Tile sets
 	case 0x9800 <= addr && addr <= 0x9FFF: // BG tile maps
+	case 0xC000 <= addr && addr <= 0xCFFF: // Work RAM Bank 0
+	case 0xD000 <= addr && addr <= 0xDFFF: // Work RAM Bank 1
+	case addr == 0xFF01: // SB: Serial transfer data
 	case addr == 0xFF40: // LCDC: LCD Control
 	case addr == 0xFF42: // SCY: Scroll Y
 	case addr == 0xFF43: // SCX: Scroll X
@@ -60,14 +56,26 @@ func (st *st) writeMem_u8(addr u16, value u8) {
 	switch {
 	case 0x8000 <= addr && addr <= 0x97FF: // Tile sets
 	case 0x9800 <= addr && addr <= 0x9FFF: // BG tile maps
+	case 0xC000 <= addr && addr <= 0xCFFF: // Work RAM Bank 0
+	case 0xD000 <= addr && addr <= 0xDFFF: // Work RAM Bank 1
+	case addr == 0xFF01: // SB: Serial transfer data
+	case addr == 0xFF02 && value == 0x81: // SC: Serial transfer Control
+		s := string([]u8{st.readMem_u8(0xFF01)})
+		fmt.Print(s)
+	case addr == 0xFF07 && value == 0x00: // TAC: Timer control
+	case addr == 0xFF0F && value == 0x00: // IF: Interrupt Flag
 	case 0xFF11 <= addr && addr <= 0xFF14: // TODO Audio
 	case 0xFF24 <= addr && addr <= 0xFF26: // TODO Audio
 	case addr == 0xFF40: // LCDC: LCD Control
 	case addr == 0xFF42: // SCY: Scroll Y
+	case addr == 0xFF43: // SCX: Scroll X
 	case addr == 0xFF47: // BGP: BackGround Palette
+	case addr == 0xFF50:
+		st.biosIsEnabled = false
 	case 0xFF80 <= addr && addr <= 0xFFFE: // Zero Page
+	case addr == 0xFFFF && value == 0x00: // IE: Interrupt Enable
 	default:
-		panic(fmt.Sprintf("Unimplemented memory write at 0x%04X.", addr))
+		panic(fmt.Sprintf("Unimplemented memory write 0x%02X at 0x%04X.", value, addr))
 	}
 	st.mem[addr] = value
 }

@@ -21,6 +21,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"time"
 )
@@ -30,6 +31,10 @@ type u8 = uint8
 type i8 = int8
 type u16 = uint16
 type u32 = uint32
+
+func sha256Hash(x []u8) string {
+	return fmt.Sprintf("%x", sha256.Sum256(x))
+}
 
 func stopWatch(s string, start time.Time) {
 	elapsed := time.Since(start)

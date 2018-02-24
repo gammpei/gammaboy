@@ -20,6 +20,12 @@
 
 package main
 
+import (
+	"fmt"
+	"io/ioutil"
+	"time"
+)
+
 // The state of the emulator.
 type state struct {
 	regs [6]u16
@@ -29,5 +35,47 @@ type state struct {
 	// At 4.19 MHz, a uint64 is enough for 139 508 years...
 	// Needless to say I'll let other people deal with that overflow bug...
 	cycles uint64
+
+	biosIsEnabled bool
+	IME           bool // Interrupt Master Enable
+
+	rom []u8
 }
 type st = state
+
+func newState(romPath string) st {
+	var rom []u8
+	if romPath == "" {
+		rom = make([]u8, 0x7FFF+1)
+		for i, _ := range rom {
+			rom[i] = 0xFF
+		}
+	} else {
+		defer stopWatch("load rom", time.Now())
+
+		var err error
+		rom, err = ioutil.ReadFile(romPath)
+		check(err)
+
+		assert(len(rom) == 0x7FFF+1)
+
+		testedRoms := map[string]struct{}{}
+		for _, hash := range [...]string{
+			"17ada54b0b9c1a33cd5429fce5b765e42392189ca36da96312222ffe309e7ed1", // Blargg's CPU test ROM #6
+		} {
+			testedRoms[hash] = struct{}{}
+		}
+		hash := sha256Hash(rom)
+		_, ok := testedRoms[hash]
+		if !ok {
+			fmt.Printf("Untested rom %s\n", hash)
+		}
+	}
+
+	return st{
+		cycles:        0,
+		biosIsEnabled: true,
+		IME:           false, // 0 at startup since the bios is mapped over the interrupt vector table.
+		rom:           rom,
+	}
+}

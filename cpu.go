@@ -126,6 +126,9 @@ func newInstr(operation operation, operands []operand) *instr {
 	switch f := operation.f.(type) {
 	case func(*st):
 		execute = f
+	case func(*st, r_bool):
+		x := operands[0].(r_bool)
+		execute = func(st *st) { f(st, x) }
 	case func(*st, r_i8):
 		x := operands[0].(r_i8)
 		execute = func(st *st) { f(st, x) }
@@ -147,6 +150,10 @@ func newInstr(operation operation, operands []operand) *instr {
 	case func(*st, r_bool, r_i8):
 		x := operands[0].(r_bool)
 		y := operands[1].(r_i8)
+		execute = func(st *st) { f(st, x, y) }
+	case func(*st, r_bool, r_u16):
+		x := operands[0].(r_bool)
+		y := operands[1].(r_u16)
 		execute = func(st *st) { f(st, x, y) }
 	case func(*st, u3, r_u8):
 		x := operands[0].(u3)

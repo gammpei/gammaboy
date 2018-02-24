@@ -24,19 +24,37 @@ package main
 // Carry and borrow functions
 // --------------------------
 
-func carry(x u8, y u8) bool {
-	return int(x)+int(y) > 0xFF
+func carry_u8(xs ...u8) bool {
+	assert(len(xs) == 2 || len(xs) == 3)
+	result := 0
+	for _, x := range xs {
+		result += int(x)
+	}
+	return result > 0xFF
 }
 
-func halfCarry(x u8, y u8) bool {
-	return (x&0x0F)+(y&0x0F) > 0x0F
+func halfCarry_u8(xs ...u8) bool {
+	assert(len(xs) == 2 || len(xs) == 3)
+	var result uint = 0
+	for _, x := range xs {
+		result += uint(x & 0x0F)
+	}
+	return result > 0x0F
 }
 
-func borrow(x u8, y u8) bool {
+func carry_u16(x, y u16) bool {
+	return int(x)+int(y) > 0xFFFF
+}
+
+func halfCarry_u16(x, y u16) bool {
+	return (x&0x0FFF)+(y&0x0FFF) > 0x0FFF
+}
+
+func borrow(x, y u8) bool {
 	return x < y
 }
 
-func halfBorrow(x u8, y u8) bool {
+func halfBorrow(x, y u8) bool {
 	return (x & 0x0F) < (y & 0x0F)
 }
 
@@ -44,8 +62,22 @@ func halfBorrow(x u8, y u8) bool {
 // CPU operations in alphabetical order
 // ------------------------------------
 
+// UM0080.pdf rev 11 p165 / 332
+var ADC_A = operation{"ADC", func(st *st, x r_u8) {
+	v1 := A.get(st)
+	v2 := x.get(st)
+	v3 := u8FromBool(F.C.get(st))
+	result := v1 + v2 + v3
+	A.set(st, result)
+
+	F.Z.set(st, result == 0x00)
+	F.N.set(st, false)
+	F.H.set(st, halfCarry_u8(v1, v2, v3))
+	F.C.set(st, carry_u8(v1, v2, v3))
+}}
+
 // UM0080.pdf rev 11 p159,161,162 / 332
-var ADD1 = operation{"ADD", func(st *st, x r_u8) {
+var ADD_A = operation{"ADD", func(st *st, x r_u8) {
 	v1 := A.get(st)
 	v2 := x.get(st)
 	result := v1 + v2
@@ -53,8 +85,30 @@ var ADD1 = operation{"ADD", func(st *st, x r_u8) {
 
 	F.Z.set(st, result == 0x00)
 	F.N.set(st, false)
-	F.H.set(st, halfCarry(v1, v2))
-	F.C.set(st, carry(v1, v2))
+	F.H.set(st, halfCarry_u8(v1, v2))
+	F.C.set(st, carry_u8(v1, v2))
+}}
+
+// UM0080.pdf rev 11 p202 / 332
+var ADD_HL = operation{"ADD", func(st *st, x r_u16) {
+	v1 := HL.get(st)
+	v2 := x.get(st)
+	HL.set(st, v1+v2)
+
+	F.N.set(st, false)
+	F.H.set(st, halfCarry_u16(v1, v2))
+	F.C.set(st, carry_u16(v1, v2))
+}}
+
+// UM0080.pdf rev 11 p171 / 332
+var AND = operation{"AND", func(st *st, x r_u8) {
+	result := A.get(st) & x.get(st)
+	A.set(st, result)
+
+	F.Z.set(st, result == 0x00)
+	F.N.set(st, false)
+	F.H.set(st, true)
+	F.C.set(st, false)
 }}
 
 // UM0080.pdf rev 11 p257,259 / 332
@@ -81,6 +135,13 @@ var CALL1 = operation{"CALL", func(st *st, x r_u16) {
 	PC.set(st, x.get(st))
 }}
 
+// UM0080.pdf rev 11 p297 / 332
+var CALL2 = operation{"CALL", func(st *st, x r_bool, y r_u16) {
+	if x.get(st) {
+		CALL1.f.(func(*state, r_u16))(st, y)
+	}
+}}
+
 // UM0080.pdf rev 11 p184 / 332
 var DEC_u8 = operation{"DEC", func(st *st, x rw_u8) {
 	oldValue := x.get(st)
@@ -92,20 +153,31 @@ var DEC_u8 = operation{"DEC", func(st *st, x rw_u8) {
 	F.H.set(st, halfBorrow(oldValue, 1))
 }}
 
+// UM0080.pdf rev 11 p196 / 332
+var DI = operation{"DI", func(st *st) {
+	st.IME = false
+}}
+
 // UM0080.pdf rev 11 p179,181 / 332
 var INC_u8 = operation{"INC", func(st *st, x rw_u8) {
-	oldValue := x.get(st)
-	newValue := oldValue + 1
-	x.set(st, newValue)
+	v1 := x.get(st)
+	var v2 u8 = 1
+	result := v1 + v2
+	x.set(st, result)
 
-	F.Z.set(st, newValue == 0x00)
+	F.Z.set(st, result == 0x00)
 	F.N.set(st, false)
-	F.H.set(st, halfCarry(oldValue, 1))
+	F.H.set(st, halfCarry_u8(v1, v2))
 }}
 
 // UM0080.pdf rev 11 p212 / 332
 var INC_u16 = operation{"INC", func(st *st, x rw_u16) {
 	x.set(st, x.get(st)+1)
+}}
+
+// UM0080.pdf rev 11 p276 / 332
+var JP1 = operation{"JP", func(st *st, x r_u16) {
+	PC.set(st, x.get(st))
 }}
 
 // UM0080.pdf rev 11 p279 / 332
@@ -149,6 +221,17 @@ var LDI = operation{"LDI", func(st *st, x w_u8, y r_u8) {
 // UM0080.pdf rev 11 p194 / 332
 var NOP = operation{"NOP", func(*st) {}}
 
+// UM0080.pdf rev 11 p173 / 332
+var OR = operation{"OR", func(st *st, x r_u8) {
+	result := A.get(st) | x.get(st)
+	A.set(st, result)
+
+	F.Z.set(st, result == 0x00)
+	F.N.set(st, false)
+	F.H.set(st, false)
+	F.C.set(st, false)
+}}
+
 // UM0080.pdf rev 11 p133 / 332
 var POP = operation{"POP", func(st *st, x w_u16) {
 	top := SP.get(st)
@@ -168,19 +251,26 @@ var RET0 = operation{"RET", func(st *st) {
 	POP.f.(func(*state, w_u16))(st, PC)
 }}
 
+// UM0080.pdf rev 11 p300 / 332
+var RET1 = operation{"RET", func(st *st, x r_bool) {
+	if x.get(st) {
+		RET0.f.(func(*state))(st)
+	}
+}}
+
 // UM0080.pdf rev 11 p235 / 332
 var RL = operation{"RL", func(st *st, x rw_u8) {
 	oldValue := x.get(st)
 	oldBit7 := getBit(oldValue, 7)
 	oldCarryFlag := F.C.get(st)
 
-	newValue := (oldValue << 1) | u8FromBool(oldCarryFlag)
-	x.set(st, newValue)
-	F.C.set(st, oldBit7)
+	result := (oldValue << 1) | u8FromBool(oldCarryFlag)
+	x.set(st, result)
 
-	F.Z.set(st, newValue == 0x00)
+	F.Z.set(st, result == 0x00)
 	F.N.set(st, false)
 	F.H.set(st, false)
+	F.C.set(st, oldBit7)
 }}
 
 // UM0080.pdf rev 11 p221 / 332
@@ -191,13 +281,39 @@ var RLA = operation{"RLA", func(st *st) {
 }}
 
 // UM0080.pdf rev 11 p241 / 332
-var RR = operation{"RR", func(*st, rw_u8) {
-	panic("TODO")
+var RR = operation{"RR", func(st *st, x rw_u8) {
+	oldValue := x.get(st)
+	oldBit0 := getBit(oldValue, 0)
+	oldCarryFlag := F.C.get(st)
+
+	result := (u8FromBool(oldCarryFlag) << 7) | (oldValue >> 1)
+	x.set(st, result)
+
+	F.Z.set(st, result == 0x00)
+	F.N.set(st, false)
+	F.H.set(st, false)
+	F.C.set(st, oldBit0)
 }}
 
 // UM0080.pdf rev 11 p225 / 332
-var RRA = operation{"RRA", func(*st) {
-	panic("TODO")
+var RRA = operation{"RRA", func(st *st) {
+	oldZeroFlag := F.Z.get(st)
+	RR.f.(func(*state, rw_u8))(st, A)
+	F.Z.set(st, oldZeroFlag)
+}}
+
+// UM0080.pdf rev 11 p250 / 332
+var SRL = operation{"SRL", func(st *st, x rw_u8) {
+	oldValue := x.get(st)
+	oldBit0 := getBit(oldValue, 0)
+
+	result := oldValue >> 1
+	x.set(st, result)
+
+	F.Z.set(st, result == 0x00)
+	F.N.set(st, false)
+	F.H.set(st, false)
+	F.C.set(st, oldBit0)
 }}
 
 // UM0080.pdf rev 11 p167 / 332
