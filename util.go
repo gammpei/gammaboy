@@ -26,7 +26,6 @@ import (
 	"time"
 )
 
-type u3 uint
 type u8 = uint8
 type i8 = int8
 type u16 = uint16
@@ -44,6 +43,15 @@ func stopWatch(s string, start time.Time) {
 func getBit(x u8, bit uint) bool {
 	assert(0 <= bit && bit <= 7)
 	return (x>>bit)&0x01 != 0x00
+}
+
+func setBit(x u8, bit uint, value bool) u8 {
+	assert(0 <= bit && bit <= 7)
+	if value {
+		return x | (0x01 << bit)
+	} else {
+		return x & ^(0x01 << bit)
+	}
 }
 
 func u8FromBool(x bool) u8 {

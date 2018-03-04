@@ -119,6 +119,21 @@ func (mem mem) set(st *st, value u8) {
 	st.writeMem_u8(addr, value)
 }
 
+type mem_u16 mem
+
+func (m mem_u16) sizeOf() u16 {
+	return mem(m).sizeOf()
+}
+
+func (m mem_u16) toString(st *st) string {
+	return mem(m).toString(st)
+}
+
+func (m mem_u16) set(st *st, value u16) {
+	addr := m.addr.get(st)
+	st.writeMem_u16(addr, value)
+}
+
 // ----------------
 // Immediate values
 // ----------------

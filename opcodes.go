@@ -70,17 +70,17 @@ var F_operands = map[string]r_bool{
 }
 
 var ALU = map[string]operation{
-	"000": ADD_A,
-	"001": ADC_A,
+	"000": ADD_u8,
+	"001": ADC,
 	"010": SUB,
-	// "011": SBC,
+	"011": SBC,
 	"100": AND,
 	"101": XOR,
 	"110": OR,
 	"111": CP,
 }
 
-var N = map[string]u3{
+var N = map[string]const_u3{
 	"000": 0,
 	"001": 1,
 	"010": 2,
@@ -100,6 +100,7 @@ func buildJumpTable() {
 	add("00000000", NOP)
 
 	// LD (N),SP
+	add("00001000", LD_u16, mem_u16{imm_u16}, SP)
 
 	// LD R,N
 	for ii, x := range R2 {
@@ -108,7 +109,7 @@ func buildJumpTable() {
 
 	// ADD HL,R
 	for ii, x := range R2 {
-		add("00"+ii+"1001", ADD_HL, x)
+		add("00"+ii+"1001", ADD_u16, HL, x)
 	}
 
 	// LD (R),A
@@ -127,6 +128,9 @@ func buildJumpTable() {
 	}
 
 	// DEC R
+	for ii, x := range R2 {
+		add("00"+ii+"1011", DEC_u16, x)
+	}
 
 	// INC D
 	for iii, x := range D_operands {
@@ -144,6 +148,8 @@ func buildJumpTable() {
 	}
 
 	// RdCA
+	add("00000111", RLCA)
+	add("00001111", RRCA)
 
 	// RdA
 	add("00010111", RLA)
@@ -172,9 +178,16 @@ func buildJumpTable() {
 	add("00111010", LDD, A, mem{HL})
 
 	// DAA
+	add("00100111", DAA)
+
 	// CPL
+	add("00101111", CPL)
+
 	// SCF
+	add("00110111", SCF)
+
 	// CCF
+	add("00111111", CCF)
 
 	// LD D,D
 	for iii, x := range D_operands {
@@ -190,13 +203,25 @@ func buildJumpTable() {
 	// ALU A,D
 	for iii, operation := range ALU {
 		for jjj, x := range D_operands {
-			add("10"+iii+jjj, operation, x)
+			operands := make([]operand, 0 /*len*/, 2 /*cap*/)
+			if operation.nbOperands() == 2 {
+				operands = append(operands, A)
+			}
+			operands = append(operands, x)
+
+			add("10"+iii+jjj, operation, operands...)
 		}
 	}
 
 	// ALU A,N
 	for iii, operation := range ALU {
-		add("11"+iii+"110", operation, imm_u8)
+		operands := make([]operand, 0 /*len*/, 2 /*cap*/)
+		if operation.nbOperands() == 2 {
+			operands = append(operands, A)
+		}
+		operands = append(operands, imm_u8)
+
+		add("11"+iii+"110", operation, operands...)
 	}
 
 	// POP R
@@ -210,6 +235,9 @@ func buildJumpTable() {
 	}
 
 	// RST N
+	for iii, x := range N {
+		add("11"+iii+"111", RST, const_u8(x<<3))
+	}
 
 	// RET F
 	for ii, x := range F_operands {
@@ -220,7 +248,12 @@ func buildJumpTable() {
 	add("11001001", RET0)
 
 	// RETI
+	add("11011001", RETI)
+
 	// JP F,N
+	for ii, x := range F_operands {
+		add("110"+ii+"010", JP2, x, imm_u16)
+	}
 
 	// JP N
 	add("11000011", JP1, imm_u16)
@@ -234,7 +267,10 @@ func buildJumpTable() {
 	add("11001101", CALL1, imm_u16)
 
 	// ADD SP,N
+	add("11101000", ADD_E8, SP, imm_i8)
+
 	// LD HL,SP+N
+	add("11111000", LD_F8, HL, SP_imm_i8{})
 
 	// LD (0xFF00+N),A
 	add("11100000", LD_u8, mem{FF00{imm_u8}}, A)
@@ -258,11 +294,13 @@ func buildJumpTable() {
 	add("11101001", JP1, HL)
 
 	// LD SP,HL
+	add("11111001", LD_u16, SP, HL)
 
 	// DI
 	add("11110011", DI)
 
 	// EI
+	add("11111011", EI)
 }
 
 func buildExtendedJumpTable() {
@@ -270,7 +308,13 @@ func buildExtendedJumpTable() {
 		addOpcode(&extendedJumpTable, strOpcode, operation, operands)
 	}
 
-	// RdC
+	// RdC D
+	for iii, x := range D_operands {
+		add("00000"+iii, RLC, x)
+	}
+	for iii, x := range D_operands {
+		add("00001"+iii, RRC, x)
+	}
 
 	// Rd D
 	for iii, x := range D_operands {
@@ -281,7 +325,17 @@ func buildExtendedJumpTable() {
 	}
 
 	// SdA D
+	for iii, x := range D_operands {
+		add("00100"+iii, SLA, x)
+	}
+	for iii, x := range D_operands {
+		add("00101"+iii, SRA, x)
+	}
+
 	// SWAP D
+	for iii, x := range D_operands {
+		add("00110"+iii, SWAP, x)
+	}
 
 	// SRL D
 	for iii, x := range D_operands {
@@ -296,7 +350,18 @@ func buildExtendedJumpTable() {
 	}
 
 	// RES N,D
+	for iii, x := range N {
+		for jjj, y := range D_operands {
+			add("10"+iii+jjj, RES, x, y)
+		}
+	}
+
 	// SET N,D
+	for iii, x := range N {
+		for jjj, y := range D_operands {
+			add("11"+iii+jjj, SET, x, y)
+		}
+	}
 }
 
 func addOpcode(jumpTable *[256]*instr, strOpcode string, operation operation, operands []operand) {

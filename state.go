@@ -57,19 +57,9 @@ func newState(romPath string) st {
 		rom, err = ioutil.ReadFile(romPath)
 		check(err)
 
-		assert(len(rom) == 0x7FFF+1)
+		fmt.Printf("SHA-256 hash of the rom: %s\n", sha256Hash(rom))
 
-		testedRoms := map[string]struct{}{}
-		for _, hash := range [...]string{
-			"17ada54b0b9c1a33cd5429fce5b765e42392189ca36da96312222ffe309e7ed1", // Blargg's CPU test ROM #6
-		} {
-			testedRoms[hash] = struct{}{}
-		}
-		hash := sha256Hash(rom)
-		_, ok := testedRoms[hash]
-		if !ok {
-			fmt.Printf("Untested rom %s\n", hash)
-		}
+		assert(len(rom) == 0x7FFF+1)
 	}
 
 	return st{

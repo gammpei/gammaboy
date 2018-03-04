@@ -58,7 +58,12 @@ func (r *reg16) toString(*st) string {
 }
 
 func (r *reg16) get(st *st) u16 {
-	return st.regs[r.i]
+	result := st.regs[r.i]
+	if r.i == AF.i {
+		// The lowest 4 bits of F are always 0.
+		result &= 0xFFF0
+	}
+	return result
 }
 
 func (r *reg16) set(st *st, value u16) {
@@ -167,13 +172,7 @@ func (flag *flag) get(st *st) bool {
 }
 
 func (flag *flag) set(st *st, value bool) {
-	payload := F.get(st)
-	mask := u8(0x01) << flag.bit
-	if value {
-		payload |= mask
-	} else {
-		payload &= ^mask
-	}
+	payload := setBit(F.get(st), flag.bit, value)
 	F.set(st, payload)
 }
 

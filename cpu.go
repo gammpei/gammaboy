@@ -92,6 +92,10 @@ type operation struct {
 	f    interface{}
 }
 
+func (operation *operation) nbOperands() int {
+	return reflect.TypeOf(operation.f).NumIn() - 1
+}
+
 type operand interface {
 	sizeOf() u16
 	toString(*st) string
@@ -121,11 +125,14 @@ func newInstr(operation operation, operands []operand) *instr {
 	}
 
 	// (This switch would not be necessary if Go had generics.)
-	assert(reflect.TypeOf(operation.f).NumIn()-1 == len(operands))
+	assert(operation.nbOperands() == len(operands))
 	var execute func(*st)
 	switch f := operation.f.(type) {
+	// 0 operands
 	case func(*st):
 		execute = f
+
+	// 1 operand
 	case func(*st, r_bool):
 		x := operands[0].(r_bool)
 		execute = func(st *st) { f(st, x) }
@@ -147,6 +154,16 @@ func newInstr(operation operation, operands []operand) *instr {
 	case func(*st, w_u16):
 		x := operands[0].(w_u16)
 		execute = func(st *st) { f(st, x) }
+
+	// 2 operands
+	case func(*st, const_u3, r_u8):
+		x := operands[0].(const_u3)
+		y := operands[1].(r_u8)
+		execute = func(st *st) { f(st, x, y) }
+	case func(*st, const_u3, rw_u8):
+		x := operands[0].(const_u3)
+		y := operands[1].(rw_u8)
+		execute = func(st *st) { f(st, x, y) }
 	case func(*st, r_bool, r_i8):
 		x := operands[0].(r_bool)
 		y := operands[1].(r_i8)
@@ -155,18 +172,31 @@ func newInstr(operation operation, operands []operand) *instr {
 		x := operands[0].(r_bool)
 		y := operands[1].(r_u16)
 		execute = func(st *st) { f(st, x, y) }
-	case func(*st, u3, r_u8):
-		x := operands[0].(u3)
+	case func(*st, rw_u16, r_i8):
+		x := operands[0].(rw_u16)
+		y := operands[1].(r_i8)
+		execute = func(st *st) { f(st, x, y) }
+	case func(*st, rw_u16, r_u16):
+		x := operands[0].(rw_u16)
+		y := operands[1].(r_u16)
+		execute = func(st *st) { f(st, x, y) }
+	case func(*st, rw_u8, r_u8):
+		x := operands[0].(rw_u8)
 		y := operands[1].(r_u8)
 		execute = func(st *st) { f(st, x, y) }
 	case func(*st, w_u16, r_u16):
 		x := operands[0].(w_u16)
 		y := operands[1].(r_u16)
 		execute = func(st *st) { f(st, x, y) }
+	case func(*st, w_u16, SP_imm_i8):
+		x := operands[0].(w_u16)
+		y := operands[1].(SP_imm_i8)
+		execute = func(st *st) { f(st, x, y) }
 	case func(*st, w_u8, r_u8):
 		x := operands[0].(w_u8)
 		y := operands[1].(r_u8)
 		execute = func(st *st) { f(st, x, y) }
+
 	default:
 		panic(fmt.Sprintf("Unimplemented function type %T in %s.", operation.f, operation.name))
 	}
@@ -220,13 +250,33 @@ type rw_u16 interface {
 // Constants as operands
 // ---------------------
 
-func (u3) sizeOf() u16 {
+type const_u3 uint
+
+func (const_u3) sizeOf() u16 {
 	return 0
 }
 
-func (x u3) toString(*st) string {
+func (x const_u3) toString(*st) string {
 	return fmt.Sprint(x)
 }
+
+type const_u8 u8
+
+func (const_u8) sizeOf() u16 {
+	return 0
+}
+
+func (x const_u8) toString(*st) string {
+	return fmt.Sprintf("0x%02X", x)
+}
+
+func (x const_u8) get(*st) u8 {
+	return u8(x)
+}
+
+// ----------------
+// Sums as operands
+// ----------------
 
 type FF00 struct {
 	offset r_u8
@@ -242,4 +292,17 @@ func (ff00 FF00) toString(st *st) string {
 
 func (ff00 FF00) get(st *st) u16 {
 	return u16(0xFF00) + u16(ff00.offset.get(st))
+}
+
+type SP_imm_i8 struct{}
+
+func (SP_imm_i8) v1() r_u16 { return SP }
+func (SP_imm_i8) v2() r_i8  { return imm_i8 }
+
+func (x SP_imm_i8) sizeOf() u16 {
+	return x.v1().sizeOf() + x.v2().sizeOf()
+}
+
+func (x SP_imm_i8) toString(st *st) string {
+	return x.v1().toString(st) + "+" + x.v2().toString(st)
 }
