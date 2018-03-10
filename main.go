@@ -89,8 +89,37 @@ func main() {
 			fetchDecodeExecute(&st)
 			st.cycles += 4
 
-			// If the scanline wraps around, we break and draw a frame.
+			// V-Blank.
 			curScanline = getScanline(&st)
+			IF := st.readMem_u8(0xFF0F) // IF: Interrupt Flag
+			if prevScanline < 144 && curScanline >= 144 {
+				// Request V-Blank interrupt.
+				IF = setBit(IF, 0, true)
+				st.writeMem_u8(0xFF0F, IF)
+			}
+
+			// Handle interrupts.
+			IE := st.readMem_u8(0xFFFF) // IE: Interrupt Enable
+			for i := uint(0); i <= 4; i++ {
+				if getBit(IF, i) && getBit(IE, i) {
+					if st.IME {
+						// Disable interrupts.
+						st.IME = false
+
+						// Acknowledge interrupt.
+						IF = setBit(IF, i, false)
+						st.writeMem_u8(0xFF0F, IF)
+
+						// Call interrupt handler.
+						PUSH.f.(func(*state, r_u16))(&st, PC)
+						interruptVector := [5]u16{0x0040, 0x0048, 0x0050, 0x0058, 0x0060}
+						PC.set(&st, interruptVector[i])
+					}
+					break
+				}
+			}
+
+			// If the scanline wraps around, we break and draw a frame.
 			if curScanline < prevScanline {
 				break
 			}

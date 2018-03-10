@@ -25,6 +25,7 @@ import (
 )
 
 func (st *st) readMem_u8(addr u16) u8 {
+	var mask u8 = 0x00
 	switch {
 	case 0x0000 <= addr && addr <= 0x00FF:
 		if st.biosIsEnabled {
@@ -39,6 +40,8 @@ func (st *st) readMem_u8(addr u16) u8 {
 	case 0xC000 <= addr && addr <= 0xCFFF: // Work RAM Bank 0
 	case 0xD000 <= addr && addr <= 0xDFFF: // Work RAM Bank 1
 	case addr == 0xFF01: // SB: Serial transfer data
+	case addr == 0xFF0F: // IF: Interrupt Flag
+		mask = 0xE0
 	case addr == 0xFF40: // LCDC: LCD Control
 	case addr == 0xFF42: // SCY: Scroll Y
 	case addr == 0xFF43: // SCX: Scroll X
@@ -46,10 +49,13 @@ func (st *st) readMem_u8(addr u16) u8 {
 		return getScanline(st)
 	case addr == 0xFF47: // BGP: BackGround Palette
 	case 0xFF80 <= addr && addr <= 0xFFFE: // Zero Page
+	case addr == 0xFFFF: // IE: Interrupt Enable
 	default:
-		panic(fmt.Sprintf("Unimplemented memory read at 0x%04X.", addr))
+		panic(fmt.Sprintf("Unimplemented memory read at (0x%04X) and PC=0x%04X.",
+			addr, PC.get(st),
+		))
 	}
-	return st.mem[addr]
+	return st.mem[addr] | mask
 }
 
 func (st *st) writeMem_u8(addr u16, value u8) {
@@ -62,8 +68,11 @@ func (st *st) writeMem_u8(addr u16, value u8) {
 	case addr == 0xFF02 && value == 0x81: // SC: Serial transfer Control
 		s := string([]u8{st.readMem_u8(0xFF01)})
 		fmt.Print(s)
-	case addr == 0xFF07 && value == 0x00: // TAC: Timer control
-	case addr == 0xFF0F && value == 0x00: // IF: Interrupt Flag
+	case addr == 0xFF05: // TIMA: Timer counter
+		// TODO
+	case addr == 0xFF07: // TAC: Timer control
+		// TODO
+	case addr == 0xFF0F: // IF: Interrupt Flag
 	case 0xFF11 <= addr && addr <= 0xFF14: // TODO Audio
 	case 0xFF24 <= addr && addr <= 0xFF26: // TODO Audio
 	case addr == 0xFF40: // LCDC: LCD Control
@@ -73,9 +82,16 @@ func (st *st) writeMem_u8(addr u16, value u8) {
 	case addr == 0xFF50:
 		st.biosIsEnabled = false
 	case 0xFF80 <= addr && addr <= 0xFFFE: // Zero Page
-	case addr == 0xFFFF && value == 0x00: // IE: Interrupt Enable
+	case addr == 0xFFFF: // IE: Interrupt Enable
+		assert(!getBit(value, 0)) // V-Blank
+		assert(!getBit(value, 1)) // LCD STAT
+		// Timer
+		assert(!getBit(value, 3)) // Serial
+		assert(!getBit(value, 4)) // Joypad
 	default:
-		panic(fmt.Sprintf("Unimplemented memory write 0x%02X at 0x%04X.", value, addr))
+		panic(fmt.Sprintf("Unimplemented memory write 0x%02X=0b%08b at (0x%04X) and PC=0x%04X.",
+			value, value, addr, PC.get(st),
+		))
 	}
 	st.mem[addr] = value
 }
