@@ -91,9 +91,9 @@ func (recorder *recorder) addFrame(frame [144][160]u32) {
 func (recorder *recorder) close() {
 	recorder.wg.Wait()
 
-	// 4.19 MHz, 154 * 456 cycles per frame
-	const framerate = 4190000. / (154. * 456.)
-	assert(59.6 <= framerate && framerate <= 59.7)
+	// 4.194304 MHz, 154 * 456 cycles per frame
+	const framerate = 4.194304 * 1000000. / (154. * 456.)
+	assert(59.70 <= framerate && framerate <= 59.75)
 
 	argv := []string{
 		"ffmpeg",
