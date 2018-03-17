@@ -43,7 +43,7 @@ type state struct {
 }
 type st = state
 
-func newState(romPath string) st {
+func newState(romPath string) *st {
 	var rom []u8
 	if romPath == "" {
 		rom = make([]u8, 0x7FFF+1)
@@ -62,7 +62,7 @@ func newState(romPath string) st {
 		assert(len(rom) == 0x7FFF+1)
 	}
 
-	return st{
+	return &st{
 		cycles:        0,
 		biosIsEnabled: true,
 		IME:           false, // 0 at startup since the bios is mapped over the interrupt vector table.

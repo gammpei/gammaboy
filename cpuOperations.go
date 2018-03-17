@@ -63,7 +63,7 @@ func halfBorrow(x, y u8, z bool) bool {
 // ------------------------------------
 
 // UM0080.pdf rev 11 p165 / 332
-var ADC = operation{"ADC", func(st *st, x rw_u8, y r_u8) {
+var ADC = &operation{"ADC", func(st *st, x rw_u8, y r_u8) {
 	v1 := x.get(st)
 	v2 := y.get(st)
 	v3 := F.C.get(st)
@@ -78,7 +78,7 @@ var ADC = operation{"ADC", func(st *st, x rw_u8, y r_u8) {
 }}
 
 // UM0080.pdf rev 11 p159,161,162 / 332
-var ADD_u8 = operation{"ADD", func(st *st, x rw_u8, y r_u8) {
+var ADD_u8 = &operation{"ADD", func(st *st, x rw_u8, y r_u8) {
 	v1 := x.get(st)
 	v2 := y.get(st)
 
@@ -92,7 +92,7 @@ var ADD_u8 = operation{"ADD", func(st *st, x rw_u8, y r_u8) {
 }}
 
 // UM0080.pdf rev 11 p202 / 332
-var ADD_u16 = operation{"ADD", func(st *st, x rw_u16, y r_u16) {
+var ADD_u16 = &operation{"ADD", func(st *st, x rw_u16, y r_u16) {
 	v1 := x.get(st)
 	v2 := y.get(st)
 
@@ -106,7 +106,7 @@ var ADD_u16 = operation{"ADD", func(st *st, x rw_u16, y r_u16) {
 // pandocs.htm
 // add  SP,dd     E8          16 00hc SP = SP +/- dd ;dd is 8bit signed number
 // http://forums.nesdev.com/viewtopic.php?p=42143#p42143
-var ADD_E8 = operation{"ADD", func(st *st, x rw_u16, y r_i8) {
+var ADD_E8 = &operation{"ADD", func(st *st, x rw_u16, y r_i8) {
 	v1 := x.get(st)
 	v2 := y.get(st)
 	b1 := u8(v1)
@@ -122,7 +122,7 @@ var ADD_E8 = operation{"ADD", func(st *st, x rw_u16, y r_i8) {
 }}
 
 // UM0080.pdf rev 11 p171 / 332
-var AND = operation{"AND", func(st *st, x r_u8) {
+var AND = &operation{"AND", func(st *st, x r_u8) {
 	result := A.get(st) & x.get(st)
 	A.set(st, result)
 
@@ -133,7 +133,7 @@ var AND = operation{"AND", func(st *st, x r_u8) {
 }}
 
 // UM0080.pdf rev 11 p257,259 / 332
-var BIT = operation{"BIT", func(st *st, x const_u3, y r_u8) {
+var BIT = &operation{"BIT", func(st *st, x const_u3, y r_u8) {
 	result := getBit(y.get(st), uint(x))
 
 	F.Z.set(st, result == false)
@@ -142,7 +142,7 @@ var BIT = operation{"BIT", func(st *st, x const_u3, y r_u8) {
 }}
 
 // UM0080.pdf rev 11 p177 / 332
-var CP = operation{"CP", func(st *st, x r_u8) {
+var CP = &operation{"CP", func(st *st, x r_u8) {
 	v1 := A.get(st)
 	v2 := x.get(st)
 
@@ -153,13 +153,13 @@ var CP = operation{"CP", func(st *st, x r_u8) {
 }}
 
 // UM0080.pdf rev 11 p295 / 332
-var CALL1 = operation{"CALL", func(st *st, x r_u16) {
+var CALL1 = &operation{"CALL", func(st *st, x r_u16) {
 	PUSH.f.(func(*state, r_u16))(st, PC)
 	PC.set(st, x.get(st))
 }}
 
 // UM0080.pdf rev 11 p297 / 332
-var CALL2 = operation{"CALL", func(st *st, x r_bool, y r_u16) {
+var CALL2 = &operation{"CALL", func(st *st, x r_bool, y r_u16) {
 	if x.get(st) {
 		CALL1.f.(func(*state, r_u16))(st, y)
 	}
@@ -168,14 +168,14 @@ var CALL2 = operation{"CALL", func(st *st, x r_bool, y r_u16) {
 // UM0080.pdf rev 11 p192 / 332
 // pandocs.htm
 // ccf            3F           4 -00c cy=cy xor 1
-var CCF = operation{"CCF", func(st *st) {
+var CCF = &operation{"CCF", func(st *st) {
 	F.N.set(st, false)
 	F.H.set(st, false)
 	F.C.set(st, !F.C.get(st))
 }}
 
 // UM0080.pdf rev 11 p189 / 332
-var CPL = operation{"CPL", func(st *st) {
+var CPL = &operation{"CPL", func(st *st) {
 	A.set(st, ^A.get(st))
 
 	F.H.set(st, true)
@@ -183,7 +183,7 @@ var CPL = operation{"CPL", func(st *st) {
 }}
 
 // http://forums.nesdev.com/viewtopic.php?f=20&t=15944#p196282
-var DAA = operation{"DAA", func(st *st) {
+var DAA = &operation{"DAA", func(st *st) {
 	a := A.get(st)
 	if !F.N.get(st) {
 		if F.C.get(st) || a > 0x99 {
@@ -209,7 +209,7 @@ var DAA = operation{"DAA", func(st *st) {
 }}
 
 // UM0080.pdf rev 11 p184 / 332
-var DEC_u8 = operation{"DEC", func(st *st, x rw_u8) {
+var DEC_u8 = &operation{"DEC", func(st *st, x rw_u8) {
 	v1 := x.get(st)
 	var v2 u8 = 1
 
@@ -222,22 +222,22 @@ var DEC_u8 = operation{"DEC", func(st *st, x rw_u8) {
 }}
 
 // UM0080.pdf rev 11 p215 / 332
-var DEC_u16 = operation{"DEC", func(st *st, x rw_u16) {
+var DEC_u16 = &operation{"DEC", func(st *st, x rw_u16) {
 	x.set(st, x.get(st)-1)
 }}
 
 // UM0080.pdf rev 11 p196 / 332
-var DI = operation{"DI", func(st *st) {
+var DI = &operation{"DI", func(st *st) {
 	st.IME = false
 }}
 
 // UM0080.pdf rev 11 p197 / 332
-var EI = operation{"EI", func(st *st) {
+var EI = &operation{"EI", func(st *st) {
 	st.IME = true
 }}
 
 // UM0080.pdf rev 11 p179,181 / 332
-var INC_u8 = operation{"INC", func(st *st, x rw_u8) {
+var INC_u8 = &operation{"INC", func(st *st, x rw_u8) {
 	v1 := x.get(st)
 	var v2 u8 = 1
 
@@ -250,47 +250,47 @@ var INC_u8 = operation{"INC", func(st *st, x rw_u8) {
 }}
 
 // UM0080.pdf rev 11 p212 / 332
-var INC_u16 = operation{"INC", func(st *st, x rw_u16) {
+var INC_u16 = &operation{"INC", func(st *st, x rw_u16) {
 	x.set(st, x.get(st)+1)
 }}
 
 // UM0080.pdf rev 11 p276,289 / 332
-var JP1 = operation{"JP", func(st *st, x r_u16) {
+var JP1 = &operation{"JP", func(st *st, x r_u16) {
 	PC.set(st, x.get(st))
 }}
 
 // UM0080.pdf rev 11 p277 / 332
-var JP2 = operation{"JP", func(st *st, x r_bool, y r_u16) {
+var JP2 = &operation{"JP", func(st *st, x r_bool, y r_u16) {
 	if x.get(st) {
 		JP1.f.(func(*state, r_u16))(st, y)
 	}
 }}
 
 // UM0080.pdf rev 11 p279 / 332
-var JR1 = operation{"JR", func(st *st, x r_i8) {
+var JR1 = &operation{"JR", func(st *st, x r_i8) {
 	addr := u16(int(PC.get(st)) + int(x.get(st)))
 	PC.set(st, addr)
 }}
 
 // UM0080.pdf rev 11 p281,283,285,287 / 332
-var JR2 = operation{"JR", func(st *st, x r_bool, y r_i8) {
+var JR2 = &operation{"JR", func(st *st, x r_bool, y r_i8) {
 	if x.get(st) {
 		JR1.f.(func(*state, r_i8))(st, y)
 	}
 }}
 
 // UM0080.pdf rev 11 p85,86,88,93,99,102,103,105,106,113,126 / 332
-var LD_u8 = operation{"LD", func(st *st, x w_u8, y r_u8) {
+var LD_u8 = &operation{"LD", func(st *st, x w_u8, y r_u8) {
 	x.set(st, y.get(st))
 }}
-var LD_u16 = operation{"LD", func(st *st, x w_u16, y r_u16) {
+var LD_u16 = &operation{"LD", func(st *st, x w_u16, y r_u16) {
 	x.set(st, y.get(st))
 }}
 
 // pandocs.htm
 // ld   HL,SP+dd  F8          12 00hc HL = SP +/- dd ;dd is 8bit signed number
 // http://forums.nesdev.com/viewtopic.php?p=42143#p42143
-var LD_F8 = operation{"LD", func(st *st, x w_u16, y SP_imm_i8) {
+var LD_F8 = &operation{"LD", func(st *st, x w_u16, y SP_imm_i8) {
 	v1 := y.v1().get(st)
 	v2 := y.v2().get(st)
 	b1 := u8(v1)
@@ -308,7 +308,7 @@ var LD_F8 = operation{"LD", func(st *st, x w_u16, y SP_imm_i8) {
 // pandocs.htm
 // ldd  (HL),A      32         8 ---- (HL)=A, HL=HL-1
 // ldd  A,(HL)      3A         8 ---- A=(HL), HL=HL-1
-var LDD = operation{"LDD", func(st *st, x w_u8, y r_u8) {
+var LDD = &operation{"LDD", func(st *st, x w_u8, y r_u8) {
 	LD_u8.f.(func(*state, w_u8, r_u8))(st, x, y)
 	HL.set(st, HL.get(st)-1)
 }}
@@ -316,16 +316,16 @@ var LDD = operation{"LDD", func(st *st, x w_u8, y r_u8) {
 // pandocs.htm
 // ldi  (HL),A      22         8 ---- (HL)=A, HL=HL+1
 // ldi  A,(HL)      2A         8 ---- A=(HL), HL=HL+1
-var LDI = operation{"LDI", func(st *st, x w_u8, y r_u8) {
+var LDI = &operation{"LDI", func(st *st, x w_u8, y r_u8) {
 	LD_u8.f.(func(*state, w_u8, r_u8))(st, x, y)
 	HL.set(st, HL.get(st)+1)
 }}
 
 // UM0080.pdf rev 11 p194 / 332
-var NOP = operation{"NOP", func(*st) {}}
+var NOP = &operation{"NOP", func(*st) {}}
 
 // UM0080.pdf rev 11 p173 / 332
-var OR = operation{"OR", func(st *st, x r_u8) {
+var OR = &operation{"OR", func(st *st, x r_u8) {
 	result := A.get(st) | x.get(st)
 	A.set(st, result)
 
@@ -336,32 +336,32 @@ var OR = operation{"OR", func(st *st, x r_u8) {
 }}
 
 // UM0080.pdf rev 11 p133 / 332
-var POP = operation{"POP", func(st *st, x w_u16) {
+var POP = &operation{"POP", func(st *st, x w_u16) {
 	top := SP.get(st)
 	x.set(st, st.readMem_u16(top))
 	SP.set(st, top+2)
 }}
 
 // UM0080.pdf rev 11 p129 / 332
-var PUSH = operation{"PUSH", func(st *st, x r_u16) {
+var PUSH = &operation{"PUSH", func(st *st, x r_u16) {
 	top := SP.get(st) - 2
 	SP.set(st, top)
 	st.writeMem_u16(top, x.get(st))
 }}
 
 // UM0080.pdf rev 11 p273 / 332
-var RES = operation{"RES", func(st *st, x const_u3, y rw_u8) {
+var RES = &operation{"RES", func(st *st, x const_u3, y rw_u8) {
 	result := setBit(y.get(st), uint(x), false)
 	y.set(st, result)
 }}
 
 // UM0080.pdf rev 11 p299 / 332
-var RET0 = operation{"RET", func(st *st) {
+var RET0 = &operation{"RET", func(st *st) {
 	POP.f.(func(*state, w_u16))(st, PC)
 }}
 
 // UM0080.pdf rev 11 p300 / 332
-var RET1 = operation{"RET", func(st *st, x r_bool) {
+var RET1 = &operation{"RET", func(st *st, x r_bool) {
 	if x.get(st) {
 		RET0.f.(func(*state))(st)
 	}
@@ -369,13 +369,13 @@ var RET1 = operation{"RET", func(st *st, x r_bool) {
 
 // pandocs.htm
 // reti           D9          16 ---- return and enable interrupts (IME=1)
-var RETI = operation{"RETI", func(st *st) {
+var RETI = &operation{"RETI", func(st *st) {
 	EI.f.(func(*state))(st)
 	RET0.f.(func(*state))(st)
 }}
 
 // UM0080.pdf rev 11 p235 / 332
-var RL = operation{"RL", func(st *st, x rw_u8) {
+var RL = &operation{"RL", func(st *st, x rw_u8) {
 	oldValue := x.get(st)
 	oldBit7 := getBit(oldValue, 7)
 	oldCarryFlag := F.C.get(st)
@@ -392,13 +392,13 @@ var RL = operation{"RL", func(st *st, x rw_u8) {
 // UM0080.pdf rev 11 p221 / 332
 // pandocs.htm
 // rla            17           4 000c rotate akku left through carry
-var RLA = operation{"RLA", func(st *st) {
+var RLA = &operation{"RLA", func(st *st) {
 	RL.f.(func(*state, rw_u8))(st, A)
 	F.Z.set(st, false)
 }}
 
 // UM0080.pdf rev 11 p227,229 / 332
-var RLC = operation{"RLC", func(st *st, x rw_u8) {
+var RLC = &operation{"RLC", func(st *st, x rw_u8) {
 	oldValue := x.get(st)
 	oldBit7 := getBit(oldValue, 7)
 
@@ -414,13 +414,13 @@ var RLC = operation{"RLC", func(st *st, x rw_u8) {
 // UM0080.pdf rev 11 p219 / 332
 // pandocs.htm
 // rlca           07           4 000c rotate akku left
-var RLCA = operation{"RLCA", func(st *st) {
+var RLCA = &operation{"RLCA", func(st *st) {
 	RLC.f.(func(*state, rw_u8))(st, A)
 	F.Z.set(st, false)
 }}
 
 // UM0080.pdf rev 11 p241 / 332
-var RR = operation{"RR", func(st *st, x rw_u8) {
+var RR = &operation{"RR", func(st *st, x rw_u8) {
 	oldValue := x.get(st)
 	oldBit0 := getBit(oldValue, 0)
 	oldCarryFlag := F.C.get(st)
@@ -437,13 +437,13 @@ var RR = operation{"RR", func(st *st, x rw_u8) {
 // UM0080.pdf rev 11 p225 / 332
 // pandocs.htm
 // rra            1F           4 000c rotate akku right through carry
-var RRA = operation{"RRA", func(st *st) {
+var RRA = &operation{"RRA", func(st *st) {
 	RR.f.(func(*state, rw_u8))(st, A)
 	F.Z.set(st, false)
 }}
 
 // UM0080.pdf rev 11 p224 / 332
-var RRC = operation{"RRC", func(st *st, x rw_u8) {
+var RRC = &operation{"RRC", func(st *st, x rw_u8) {
 	oldValue := x.get(st)
 	oldBit0 := getBit(oldValue, 0)
 
@@ -459,19 +459,19 @@ var RRC = operation{"RRC", func(st *st, x rw_u8) {
 // UM0080.pdf rev 11 p223 / 332
 // pandocs.htm
 // rrca           0F           4 000c rotate akku right
-var RRCA = operation{"RRCA", func(st *st) {
+var RRCA = &operation{"RRCA", func(st *st) {
 	RRC.f.(func(*state, rw_u8))(st, A)
 	F.Z.set(st, false)
 }}
 
 // UM0080.pdf rev 11 p306 / 332
-var RST = operation{"RST", func(st *st, x r_u8) {
+var RST = &operation{"RST", func(st *st, x r_u8) {
 	PUSH.f.(func(*state, r_u16))(st, PC)
 	PC.set(st, u16(x.get(st)))
 }}
 
 // UM0080.pdf rev 11 p169 / 332
-var SBC = operation{"SBC", func(st *st, x rw_u8, y r_u8) {
+var SBC = &operation{"SBC", func(st *st, x rw_u8, y r_u8) {
 	v1 := x.get(st)
 	v2 := y.get(st)
 	v3 := F.C.get(st)
@@ -486,20 +486,20 @@ var SBC = operation{"SBC", func(st *st, x rw_u8, y r_u8) {
 }}
 
 // UM0080.pdf rev 11 p193 / 332
-var SCF = operation{"SCF", func(st *st) {
+var SCF = &operation{"SCF", func(st *st) {
 	F.N.set(st, false)
 	F.H.set(st, false)
 	F.C.set(st, true)
 }}
 
 // UM0080.pdf rev 11 p265,267 / 332
-var SET = operation{"SET", func(st *st, x const_u3, y rw_u8) {
+var SET = &operation{"SET", func(st *st, x const_u3, y rw_u8) {
 	result := setBit(y.get(st), uint(x), true)
 	y.set(st, result)
 }}
 
 // UM0080.pdf rev 11 p244 / 332
-var SLA = operation{"SLA", func(st *st, x rw_u8) {
+var SLA = &operation{"SLA", func(st *st, x rw_u8) {
 	oldValue := x.get(st)
 	oldBit7 := getBit(oldValue, 7)
 
@@ -513,7 +513,7 @@ var SLA = operation{"SLA", func(st *st, x rw_u8) {
 }}
 
 // UM0080.pdf rev 11 p247 / 332
-var SRA = operation{"SRA", func(st *st, x rw_u8) {
+var SRA = &operation{"SRA", func(st *st, x rw_u8) {
 	oldValue := x.get(st)
 	oldBit0 := getBit(oldValue, 0)
 	oldBit7 := getBit(oldValue, 7)
@@ -528,7 +528,7 @@ var SRA = operation{"SRA", func(st *st, x rw_u8) {
 }}
 
 // UM0080.pdf rev 11 p250 / 332
-var SRL = operation{"SRL", func(st *st, x rw_u8) {
+var SRL = &operation{"SRL", func(st *st, x rw_u8) {
 	oldValue := x.get(st)
 	oldBit0 := getBit(oldValue, 0)
 
@@ -542,7 +542,7 @@ var SRL = operation{"SRL", func(st *st, x rw_u8) {
 }}
 
 // UM0080.pdf rev 11 p167 / 332
-var SUB = operation{"SUB", func(st *st, x r_u8) {
+var SUB = &operation{"SUB", func(st *st, x r_u8) {
 	CP.f.(func(*state, r_u8))(st, x)
 	A.set(st, A.get(st)-x.get(st))
 }}
@@ -550,7 +550,7 @@ var SUB = operation{"SUB", func(st *st, x r_u8) {
 // pandocs.htm
 // swap r         CB 3x        8 z000 exchange low/hi-nibble
 // swap (HL)      CB 36       16 z000 exchange low/hi-nibble
-var SWAP = operation{"SWAP", func(st *st, x rw_u8) {
+var SWAP = &operation{"SWAP", func(st *st, x rw_u8) {
 	oldValue := x.get(st)
 	lowNibble := oldValue & 0x0F
 	highNibble := oldValue >> 4
@@ -565,7 +565,7 @@ var SWAP = operation{"SWAP", func(st *st, x rw_u8) {
 }}
 
 // UM0080.pdf rev 11 p175 / 332
-var XOR = operation{"XOR", func(st *st, x r_u8) {
+var XOR = &operation{"XOR", func(st *st, x r_u8) {
 	result := A.get(st) ^ x.get(st)
 	A.set(st, result)
 

@@ -69,7 +69,7 @@ var F_operands = map[string]r_bool{
 	"11": F.C,
 }
 
-var ALU = map[string]operation{
+var ALU = map[string]*operation{
 	"000": ADD_u8,
 	"001": ADC,
 	"010": SUB,
@@ -92,7 +92,7 @@ var N = map[string]const_u3{
 }
 
 func buildJumpTable() {
-	add := func(strOpcode string, operation operation, operands ...operand) {
+	add := func(strOpcode string, operation *operation, operands ...operand) {
 		addOpcode(&jumpTable, strOpcode, operation, operands)
 	}
 
@@ -304,7 +304,7 @@ func buildJumpTable() {
 }
 
 func buildExtendedJumpTable() {
-	add := func(strOpcode string, operation operation, operands ...operand) {
+	add := func(strOpcode string, operation *operation, operands ...operand) {
 		addOpcode(&extendedJumpTable, strOpcode, operation, operands)
 	}
 
@@ -364,7 +364,7 @@ func buildExtendedJumpTable() {
 	}
 }
 
-func addOpcode(jumpTable *[256]*instr, strOpcode string, operation operation, operands []operand) {
+func addOpcode(jumpTable *[256]*instr, strOpcode string, operation *operation, operands []operand) {
 	assert(len(strOpcode) == 8)
 	opcode64, err := strconv.ParseUint(strOpcode, 2 /*base*/, 8 /*bitsize*/)
 	check(err)

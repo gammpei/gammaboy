@@ -35,7 +35,7 @@ func fetchDecodeExecute(st *st) {
 
 	// Fetch
 	PC_0 := PC.get(st)
-	opcode := st.readMem_u8(PC_0)
+	opcode := st.readMem(PC_0)
 
 	// Decode
 	var sizeOfOpcode u16
@@ -48,7 +48,7 @@ func fetchDecodeExecute(st *st) {
 		}
 	} else {
 		sizeOfOpcode = 2
-		opcode = st.readMem_u8(PC_0 + 1)
+		opcode = st.readMem(PC_0 + 1)
 		instr = extendedJumpTable[opcode]
 		if instr == nil {
 			panic(fmt.Sprintf("Unknown extended opcode 0xCB-0x%02X=0b%08b at 0x%04X.", opcode, opcode, PC_0))
@@ -62,7 +62,7 @@ func fetchDecodeExecute(st *st) {
 
 	// Log the instruction
 	if flags.verbose {
-		r := func(offset u16) u8 { return st.readMem_u8(PC_0 + offset) }
+		r := func(offset u16) u8 { return st.readMem(PC_0 + offset) }
 		var instrBytes string
 		switch sizeOfInstr {
 		case 1:
@@ -101,7 +101,7 @@ type operand interface {
 	toString(*st) string
 }
 
-func newInstr(operation operation, operands []operand) *instr {
+func newInstr(operation *operation, operands []operand) *instr {
 	var sizeOfOperands u16 = 0
 	for _, operand := range operands {
 		sizeOfOperands += operand.sizeOf()

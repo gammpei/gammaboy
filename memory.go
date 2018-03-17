@@ -24,7 +24,7 @@ import (
 	"fmt"
 )
 
-func (st *st) readMem_u8(addr u16) u8 {
+func (st *st) readMem(addr u16) u8 {
 	var mask u8 = 0x00
 	switch {
 	case 0x0000 <= addr && addr <= 0x00FF:
@@ -58,7 +58,7 @@ func (st *st) readMem_u8(addr u16) u8 {
 	return st.mem[addr] | mask
 }
 
-func (st *st) writeMem_u8(addr u16, value u8) {
+func (st *st) writeMem(addr u16, value u8) {
 	switch {
 	case 0x8000 <= addr && addr <= 0x97FF: // Tile sets
 	case 0x9800 <= addr && addr <= 0x9FFF: // BG tile maps
@@ -66,7 +66,7 @@ func (st *st) writeMem_u8(addr u16, value u8) {
 	case 0xD000 <= addr && addr <= 0xDFFF: // Work RAM Bank 1
 	case addr == 0xFF01: // SB: Serial transfer data
 	case addr == 0xFF02 && value == 0x81: // SC: Serial transfer Control
-		s := string([]u8{st.readMem_u8(0xFF01)})
+		s := string([]u8{st.readMem(0xFF01)})
 		fmt.Print(s)
 	case addr == 0xFF05: // TIMA: Timer counter
 		// TODO
@@ -97,16 +97,16 @@ func (st *st) writeMem_u8(addr u16, value u8) {
 }
 
 func (st *st) readMem_u16(addr u16) u16 {
-	littleEnd := st.readMem_u8(addr)
-	bigEnd := st.readMem_u8(addr + 1)
+	littleEnd := st.readMem(addr)
+	bigEnd := st.readMem(addr + 1)
 	return (u16(bigEnd) << 8) | u16(littleEnd)
 }
 
 func (st *st) writeMem_u16(addr u16, value u16) {
 	littleEnd := u8(value)
 	bigEnd := u8(value >> 8)
-	st.writeMem_u8(addr, littleEnd)
-	st.writeMem_u8(addr+1, bigEnd)
+	st.writeMem(addr, littleEnd)
+	st.writeMem(addr+1, bigEnd)
 }
 
 // ----------------------------
@@ -127,12 +127,12 @@ func (mem mem) toString(st *st) string {
 
 func (mem mem) get(st *st) u8 {
 	addr := mem.addr.get(st)
-	return st.readMem_u8(addr)
+	return st.readMem(addr)
 }
 
 func (mem mem) set(st *st, value u8) {
 	addr := mem.addr.get(st)
-	st.writeMem_u8(addr, value)
+	st.writeMem(addr, value)
 }
 
 type mem_u16 mem
@@ -169,7 +169,7 @@ func (imm_u8_t) toString(st *st) string {
 func (imm_u8_t) get(st *st) u8 {
 	// When this is called, PC has already been incremented
 	// so we need to read the previous byte.
-	return st.readMem_u8(PC.get(st) - imm_u8.sizeOf())
+	return st.readMem(PC.get(st) - imm_u8.sizeOf())
 }
 
 type imm_i8_t struct{}

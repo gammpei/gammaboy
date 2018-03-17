@@ -71,10 +71,10 @@ func main() {
 
 	defer stopWatch("main loop", time.Now())
 
-	curScanline := getScanline(&st)
+	curScanline := getScanline(st)
 	for {
 		// Draw the whole frame at once (good enough for now).
-		gui.drawFrame(&st)
+		gui.drawFrame(st)
 
 		// Process the events once per frame (good enough for now).
 		if !gui.processEvents() {
@@ -86,20 +86,20 @@ func main() {
 			prevScanline := curScanline
 
 			// We assume that all instructions take 4 cycles to execute (good enough for now).
-			fetchDecodeExecute(&st)
+			fetchDecodeExecute(st)
 			st.cycles += 4
 
 			// V-Blank.
-			curScanline = getScanline(&st)
-			IF := st.readMem_u8(0xFF0F) // IF: Interrupt Flag
+			curScanline = getScanline(st)
+			IF := st.readMem(0xFF0F) // IF: Interrupt Flag
 			if prevScanline < 144 && curScanline >= 144 {
 				// Request V-Blank interrupt.
 				IF = setBit(IF, 0, true)
-				st.writeMem_u8(0xFF0F, IF)
+				st.writeMem(0xFF0F, IF)
 			}
 
 			// Handle interrupts.
-			IE := st.readMem_u8(0xFFFF) // IE: Interrupt Enable
+			IE := st.readMem(0xFFFF) // IE: Interrupt Enable
 			for i := uint(0); i <= 4; i++ {
 				if getBit(IF, i) && getBit(IE, i) {
 					if st.IME {
@@ -108,12 +108,12 @@ func main() {
 
 						// Acknowledge interrupt.
 						IF = setBit(IF, i, false)
-						st.writeMem_u8(0xFF0F, IF)
+						st.writeMem(0xFF0F, IF)
 
 						// Call interrupt handler.
-						PUSH.f.(func(*state, r_u16))(&st, PC)
+						PUSH.f.(func(*state, r_u16))(st, PC)
 						interruptVector := [5]u16{0x0040, 0x0048, 0x0050, 0x0058, 0x0060}
-						PC.set(&st, interruptVector[i])
+						PC.set(st, interruptVector[i])
 					}
 					break
 				}

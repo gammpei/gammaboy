@@ -115,7 +115,7 @@ func (gui *gui) drawFrame(st *st) {
 		}
 	}
 
-	LCDC := st.readMem_u8(0xFF40) // LCD Control
+	LCDC := st.readMem(0xFF40) // LCD Control
 	lcdDisplayEnable := getBit(LCDC, 7)
 	if lcdDisplayEnable {
 		bgDisplayEnable := getBit(LCDC, 0)
@@ -147,7 +147,7 @@ func (gui *gui) drawFrame(st *st) {
 }
 
 func (gui *gui) drawBackground(st *st, screen *[144][160]u32) {
-	LCDC := st.readMem_u8(0xFF40) // LCD Control
+	LCDC := st.readMem(0xFF40) // LCD Control
 
 	var bgTileMap u16
 	switch getBit(LCDC, 3) {
@@ -165,7 +165,7 @@ func (gui *gui) drawBackground(st *st, screen *[144][160]u32) {
 		tileSet = 0x8000 // 0x8000-0x8FFF
 	}
 
-	BGP := st.readMem_u8(0xFF47) // BackGround Palette
+	BGP := st.readMem(0xFF47) // BackGround Palette
 	var palette [4]u32
 	for i, _ := range palette {
 		colorIndex := (BGP >> uint(i*2)) & 0x03
@@ -177,7 +177,7 @@ func (gui *gui) drawBackground(st *st, screen *[144][160]u32) {
 		for tileMapX := 0; tileMapX < 32; tileMapX++ {
 			tileMapIndex := tileMapY*32 + tileMapX
 
-			tileSetIndex := st.readMem_u8(bgTileMap + u16(tileMapIndex))
+			tileSetIndex := st.readMem(bgTileMap + u16(tileMapIndex))
 			switch tileSet {
 			case 0x8000:
 			case 0x8800:
@@ -188,8 +188,8 @@ func (gui *gui) drawBackground(st *st, screen *[144][160]u32) {
 
 			for tileY := 0; tileY < 8; tileY++ {
 				lineAddr := tileSet + u16(int(tileSetIndex)*16+tileY*2)
-				lowBits := st.readMem_u8(lineAddr)
-				highBits := st.readMem_u8(lineAddr + 1)
+				lowBits := st.readMem(lineAddr)
+				highBits := st.readMem(lineAddr + 1)
 
 				for tileX := 0; tileX < 8; tileX++ {
 					bit := uint(7 - tileX)
@@ -217,8 +217,8 @@ func (gui *gui) drawBackground(st *st, screen *[144][160]u32) {
 	}
 
 	// Update the screen.
-	SCX := st.readMem_u8(0xFF43)
-	SCY := st.readMem_u8(0xFF42)
+	SCX := st.readMem(0xFF43)
+	SCY := st.readMem(0xFF42)
 	for y := 0; y < 144; y++ {
 		for x := 0; x < 160; x++ {
 			bgX := SCX + u8(x)
