@@ -66,8 +66,12 @@ func (st *st) writeMem(addr u16, value u8) {
 	case 0xD000 <= addr && addr <= 0xDFFF: // Work RAM Bank 1
 	case addr == 0xFF01: // SB: Serial transfer data
 	case addr == 0xFF02 && value == 0x81: // SC: Serial transfer Control
-		s := string([]u8{st.readMem(0xFF01)})
-		fmt.Print(s)
+		b := st.readMem(0xFF01)
+		if st.linkCable == nil {
+			fmt.Printf("%c", b)
+		} else {
+			st.linkCable <- b
+		}
 	case addr == 0xFF05: // TIMA: Timer counter
 		// TODO
 	case addr == 0xFF07: // TAC: Timer control

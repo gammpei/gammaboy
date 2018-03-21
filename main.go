@@ -22,6 +22,7 @@ package main
 
 import (
 	cmdLineFlag "flag"
+	"fmt"
 	"io/ioutil"
 	"time"
 )
@@ -51,34 +52,75 @@ func main() {
 	cmdLineFlag.Parse()
 
 	args := cmdLineFlag.Args()
-	var romPath string
+	var rom []u8
 	var title string
 	switch len(args) {
 	case 0:
-		romPath = ""
+		rom = make([]u8, 0x7FFF+1)
+		for i, _ := range rom {
+			rom[i] = 0xFF
+		}
+
 		title = "gammaboy"
 	case 1:
-		romPath = args[0]
+		romPath := args[0]
+		startLoadRom := time.Now()
+		var err error
+		rom, err = ioutil.ReadFile(romPath)
+		check(err)
+		fmt.Printf("SHA-256 hash of the rom: %s\n", sha256Hash(rom))
+		stopWatch("load rom", startLoadRom)
+
 		title = romPath + " < gammaboy"
 	default:
 		assert(false)
 	}
 
-	st := newState(romPath)
-
-	gui := newGui(title)
-	defer gui.close()
+	gb := newGameBoy(rom, true /*showGui*/, title)
+	defer gb.close()
 
 	defer stopWatch("main loop", time.Now())
+	gb.run()
+}
+
+type gameBoy struct {
+	st  *st
+	gui *gui
+}
+
+func newGameBoy(rom []u8, showGui bool, title string) *gameBoy {
+	var linkCable chan u8 = nil
+	var gui *gui = nil
+	if showGui {
+		gui = newGui(title)
+	} else {
+		linkCable = make(chan u8, 80)
+	}
+
+	return &gameBoy{
+		st:  newState(rom, linkCable),
+		gui: gui,
+	}
+}
+
+func newTestGameBoy(rom []u8) *gameBoy {
+	return newGameBoy(rom, false /*showGui*/, "" /*title*/)
+}
+
+func (gb *gameBoy) run() {
+	st := gb.st
+	gui := gb.gui
 
 	curScanline := getScanline(st)
 	for {
-		// Draw the whole frame at once (good enough for now).
-		gui.drawFrame(st)
+		if gui != nil {
+			// Draw the whole frame at once (good enough for now).
+			gui.drawFrame(st)
 
-		// Process the events once per frame (good enough for now).
-		if !gui.processEvents() {
-			break
+			// Process the events once per frame (good enough for now).
+			if !gui.processEvents() {
+				break
+			}
 		}
 
 		// Execute instructions until we need to draw a frame.
@@ -124,6 +166,12 @@ func main() {
 				break
 			}
 		}
+	}
+}
+
+func (gb *gameBoy) close() {
+	if gb.gui != nil {
+		gb.gui.close()
 	}
 }
 

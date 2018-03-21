@@ -20,12 +20,6 @@
 
 package main
 
-import (
-	"fmt"
-	"io/ioutil"
-	"time"
-)
-
 // The state of the emulator.
 type state struct {
 	regs [6]u16
@@ -39,33 +33,19 @@ type state struct {
 	biosIsEnabled bool
 	IME           bool // Interrupt Master Enable
 
-	rom []u8
+	rom       []u8
+	linkCable chan u8
 }
 type st = state
 
-func newState(romPath string) *st {
-	var rom []u8
-	if romPath == "" {
-		rom = make([]u8, 0x7FFF+1)
-		for i, _ := range rom {
-			rom[i] = 0xFF
-		}
-	} else {
-		defer stopWatch("load rom", time.Now())
-
-		var err error
-		rom, err = ioutil.ReadFile(romPath)
-		check(err)
-
-		fmt.Printf("SHA-256 hash of the rom: %s\n", sha256Hash(rom))
-
-		assert(len(rom) == 0x7FFF+1)
-	}
+func newState(rom []u8, linkCable chan u8) *st {
+	assert(len(rom) == 0x7FFF+1)
 
 	return &st{
 		cycles:        0,
 		biosIsEnabled: true,
 		IME:           false, // 0 at startup since the bios is mapped over the interrupt vector table.
 		rom:           rom,
+		linkCable:     linkCable,
 	}
 }
