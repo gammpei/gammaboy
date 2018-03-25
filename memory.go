@@ -40,6 +40,12 @@ func (st *st) readMem(addr u16) u8 {
 	case 0xC000 <= addr && addr <= 0xCFFF: // Work RAM Bank 0
 	case 0xD000 <= addr && addr <= 0xDFFF: // Work RAM Bank 1
 	case addr == 0xFF01: // SB: Serial transfer data
+	case addr == 0xFF04: // DIV: Divider register
+		return u8(st.timing.systemClock >> 8)
+	case addr == 0xFF05: // TIMA: Timer counter
+	case addr == 0xFF06: // TMA: Timer modulo
+	case addr == 0xFF07: // TAC: Timer control
+		mask = 0xF8
 	case addr == 0xFF0F: // IF: Interrupt Flag
 		mask = 0xE0
 	case addr == 0xFF40: // LCDC: LCD Control
@@ -72,10 +78,12 @@ func (st *st) writeMem(addr u16, value u8) {
 		} else {
 			st.linkCable <- b
 		}
+	case addr == 0xFF04: // DIV: Divider register
+		st.timing.systemClock = 0x0000
+		return
 	case addr == 0xFF05: // TIMA: Timer counter
-		// TODO
+	case addr == 0xFF06: // TMA: Timer modulo
 	case addr == 0xFF07: // TAC: Timer control
-		// TODO
 	case addr == 0xFF0F: // IF: Interrupt Flag
 	case 0xFF11 <= addr && addr <= 0xFF14: // TODO Audio
 	case 0xFF24 <= addr && addr <= 0xFF26: // TODO Audio
@@ -83,6 +91,8 @@ func (st *st) writeMem(addr u16, value u8) {
 	case addr == 0xFF42: // SCY: Scroll Y
 	case addr == 0xFF43: // SCX: Scroll X
 	case addr == 0xFF47: // BGP: BackGround Palette
+	case addr == 0xFF4A: // WY: Window Y
+	case addr == 0xFF4B: // WX: Window X
 	case addr == 0xFF50:
 		st.biosIsEnabled = false
 	case 0xFF80 <= addr && addr <= 0xFFFE: // Zero Page
@@ -111,6 +121,13 @@ func (st *st) writeMem_u16(addr u16, value u16) {
 	bigEnd := u8(value >> 8)
 	st.writeMem(addr, littleEnd)
 	st.writeMem(addr+1, bigEnd)
+}
+
+func (st *st) requestInterrupt(i uint) u8 {
+	IF := st.readMem(0xFF0F) // IF: Interrupt Flag
+	IF = setBit(IF, i, true)
+	st.writeMem(0xFF0F, IF)
+	return IF
 }
 
 // ----------------------------

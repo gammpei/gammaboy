@@ -25,10 +25,15 @@ type state struct {
 	regs [6]u16
 	mem  [0xFFFF + 1]u8
 
-	// The number of elapsed clock cycles since powerup.
-	// At 4.194304 MHz, a uint64 is enough for 139 365 years...
-	// Needless to say I'll let other people deal with that overflow bug...
-	cycles uint64
+	timing struct {
+		// The number of elapsed clock cycles since powerup.
+		// At 4.194304 MHz, a u64 is enough for 139 365 years...
+		// Needless to say I'll let other people deal with that overflow bug...
+		cycles      u64
+		systemClock u16
+		// The delayed system clock bit for the timer.
+		delayedTimerBit bool
+	}
 
 	biosIsEnabled bool
 	IME           bool // Interrupt Master Enable
@@ -42,10 +47,45 @@ func newState(rom []u8, linkCable chan u8) *st {
 	assert(len(rom) == 0x7FFF+1)
 
 	return &st{
-		cycles:        0,
+		timing: struct {
+			cycles          u64
+			systemClock     u16
+			delayedTimerBit bool
+		}{
+			cycles:          0,
+			systemClock:     0x0000,
+			delayedTimerBit: false,
+		},
+
 		biosIsEnabled: true,
 		IME:           false, // 0 at startup since the bios is mapped over the interrupt vector table.
-		rom:           rom,
-		linkCable:     linkCable,
+
+		rom:       rom,
+		linkCable: linkCable,
+	}
+}
+
+func (st *st) addCycles(cycles int) {
+	for i := 0; i < cycles; i++ {
+		st.timing.cycles++
+
+		// Update timer.
+		st.timing.systemClock++
+		TAC := st.readMem(0xFF07) // TAC: Timer control
+		TAC_Freq := TAC & 0x03
+		TAC_Enable := getBit(TAC, 2)
+		systemClockBit := getBit_u16(st.timing.systemClock, [4]uint{9, 3, 5, 7}[TAC_Freq])
+		timerBit := systemClockBit && TAC_Enable
+		if st.timing.delayedTimerBit && !timerBit { // Falling edge.
+			TIMA := st.readMem(0xFF05) // TIMA: Timer counter
+			TIMA++
+			if TIMA == 0x00 { // If the timer overflowed.
+				st.requestInterrupt(2)    // Request timer interrupt.
+				TMA := st.readMem(0xFF06) // TMA: Timer modulo
+				TIMA = TMA
+			}
+			st.writeMem(0xFF05, TIMA)
+		}
+		st.timing.delayedTimerBit = timerBit
 	}
 }

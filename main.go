@@ -129,15 +129,14 @@ func (gb *gameBoy) run() {
 
 			// We assume that all instructions take 4 cycles to execute (good enough for now).
 			fetchDecodeExecute(st)
-			st.cycles += 4
+			st.addCycles(4)
 
 			// V-Blank.
 			curScanline = getScanline(st)
 			IF := st.readMem(0xFF0F) // IF: Interrupt Flag
 			if prevScanline < 144 && curScanline >= 144 {
 				// Request V-Blank interrupt.
-				IF = setBit(IF, 0, true)
-				st.writeMem(0xFF0F, IF)
+				IF = st.requestInterrupt(0)
 			}
 
 			// Handle interrupts.

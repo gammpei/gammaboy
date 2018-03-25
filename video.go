@@ -122,6 +122,11 @@ func (gui *gui) drawFrame(st *st) {
 		if bgDisplayEnable {
 			gui.drawBackground(st, &screen)
 		}
+
+		windowDisplayEnable := getBit(LCDC, 5)
+		if windowDisplayEnable {
+			panic("TODO")
+		}
 	}
 
 	if gui.recorder != nil {
@@ -257,7 +262,7 @@ func (gui *gui) close() {
 func getScanline(st *st) u8 {
 	// The LCD takes 456 cycles to draw one line.
 	// It has 154 lines (144 visible lines + 10 "V-blank lines").
-	scanline := (st.cycles / 456) % 154
+	scanline := (st.timing.cycles / 456) % 154
 	assert(0 <= scanline && scanline <= 153)
 	return u8(scanline)
 }

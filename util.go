@@ -30,6 +30,7 @@ type u8 = uint8
 type i8 = int8
 type u16 = uint16
 type u32 = uint32
+type u64 = uint64
 
 func sha256Hash(x []u8) string {
 	return fmt.Sprintf("%x", sha256.Sum256(x))
@@ -43,6 +44,11 @@ func stopWatch(s string, start time.Time) {
 func getBit(x u8, bit uint) bool {
 	assert(0 <= bit && bit <= 7)
 	return (x>>bit)&0x01 != 0x00
+}
+
+func getBit_u16(x u16, bit uint) bool {
+	assert(0 <= bit && bit <= 15)
+	return (x>>bit)&0x0001 != 0x0000
 }
 
 func setBit(x u8, bit uint, value bool) u8 {
